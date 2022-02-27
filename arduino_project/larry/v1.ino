@@ -28,9 +28,6 @@ void setup()
   leftservo.attach(10);//connect pin 10 with the control line(the middle line of Servo) 
   rightservo.attach(9);//connect pin 9 with the control line(the middle line of Servo) 
   servo_stop();
-  pinMode(red_led,OUTPUT);
-  pinMode(yellow_led,OUTPUT);
-  pinMode(green_led,OUTPUT);
 
   Serial.begin(9600);
 }
@@ -49,7 +46,7 @@ void loop() {
   Serial.println();
   //delay(100);q
 
-followline();
+  followline(); //basic line following
 
   // meet 1st intersection, do not stop, count=1
   if(sensorValues[5]>100 && sensorValues[0]>100 && count==0)
@@ -57,32 +54,31 @@ followline();
     count++;
     Serial.print("11111111111111111111111111111111111111111");
     Serial.print('\t');
+    
     servo_stop();
     delay(1000);
-//    serial.write(led,HIGH); // turn on LED 1s to indicate intersection
-//    delay(1000);
-//    serial.write(led,LOW); 
+    
     servo_forward();
     delay(500);
     return;
   }
     
   // meet 2nd intersection, count=2, turn right
-  if(sensorValues[5]>100 && sensorValues[0]>100 && (count==1 || count==4||count==7||count==10))
+  if(sensorValues[5]>100 && sensorValues[0]>100 && (count==1 || count==4||count==7||count==10||count==13))
   {
     count++;
     Serial.print("2222222222222222222222222222222222222");
     Serial.print('\t');
+    
     servo_stop();
     delay(1000);
+    
     servo_forward();
     delay(400);
     
-//    serial.write(red_led,HIGH); // turn on red LED 1s to indicate intersection
-//    delay(1000);
-//    serial.write(red_led,LOW);
     servo_right(); // turn right first
     delay(turn_90); 
+
     servo_forward(); 
     delay(400);
     return;
@@ -90,44 +86,41 @@ followline();
   }
 
   // meet 2nd intersection, count=3, go straight
-  if(sensorValues[5]>100 && sensorValues[0]>100 && (count==2 || count==5||count==8||count==11))
+  if(sensorValues[5]>100 && sensorValues[0]>100 && (count==2 || count==5||count==8||count==11||count==14))
   {
     count++;
     Serial.print("33333333333333333333333333333333333333");
     Serial.print('\t');
-//    servo_stop();
-//    delay(1000);
+
     servo_forward();
     delay(400);
-    return;
-    
-//    serial.write(red_led,HIGH); // turn on red LED 1s to indicate intersection
-//    delay(1000);
-//    serial.write(red_led,LOW);
-    
+    return;  
   }
   
   // meet 2nd intersection, count=3, turn left
-  if(sensorValues[5]>100 && sensorValues[0]>100 && (count==3 || count==6||count==9||count==12))
+  if(sensorValues[5]>100 && sensorValues[0]>100 && (count==3 || count==6||count==9||count==12||count==15))
   {
     count++;
     Serial.print("444444444444444444444444444444444444");
     Serial.print('\t');
+    
     servo_stop();
     delay(1000);
+    
     servo_forward();
     delay(400);
+    
     servo_left();
     delay(turn_90);
     
-//    serial.write(red_led,HIGH); // turn on red LED 1s to indicate intersection
-//    delay(1000);
-//    serial.write(red_led,LOW);
-   servo_forward();
-   delay(500); 
-   return;
+    servo_forward();
+    delay(500); 
+    return;
   }
-
+  if(count>=16)
+  {
+    
+  }
 
 // ultrasonic
   //    if(distance<30)
