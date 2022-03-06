@@ -1,3 +1,3 @@
-v2_3 can't deal with object at C1 position,
+v2_3 can't handle object at C1 position,
 
-Final version added the code to detect object at C1, but has not been tested yet.
+Final version v2 has been tested fully-functioning
