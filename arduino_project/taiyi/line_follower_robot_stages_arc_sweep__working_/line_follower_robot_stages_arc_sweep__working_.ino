@@ -23,6 +23,7 @@ const int pingPin = 10;
 const int blackThreshold = 600; //define minimum threshold value to qualify as black line (high value means less sensitivity)[min: 0; max: 1000]
 const int pingThreshold = 7; //near ping distance to cause alert
 const int remotePingThreshold = 45; //remote ping distance to cause alert
+const int baseMotorSpeed = 100; //set base DC motor speed for going forward (impacts total completion runtime)
 
 //stage protocols
 int stage = 0;
@@ -92,7 +93,7 @@ void loop() {
   pingObject();
   senseLine();
   microAdjust();
-  maneuver(50, 50, 50);
+  maneuver(baseMotorSpeed, baseMotorSpeed, 50);
 }
 
 /*
@@ -262,7 +263,7 @@ void backtrack() {
     // from 0 to 5000 (for a white line, use readLineWhite() instead)
     uint16_t position = qtr.readLineBlack(sensorValues);
     microAdjust();
-    maneuver(50, 50, 50);
+    maneuver(baseMotorSpeed, baseMotorSpeed, 50);
   }
   alert();
   turnLeft();
@@ -271,7 +272,7 @@ void backtrack() {
     // from 0 to 5000 (for a white line, use readLineWhite() instead)
     uint16_t position = qtr.readLineBlack(sensorValues);
     microAdjust();
-    maneuver(50, 50, 50);
+    maneuver(baseMotorSpeed, baseMotorSpeed, 50);
   }
   maneuver(50, 50, 1000); //go forward a little
 }
