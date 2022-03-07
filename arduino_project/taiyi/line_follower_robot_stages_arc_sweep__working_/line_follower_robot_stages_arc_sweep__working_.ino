@@ -183,7 +183,7 @@ void senseLine() {
 }
 
 /*
- * Define robot behaviors at X intersections 
+ * Define robot behaviors at X intersections
  */
 void intersectionScan() {
   //full stop
@@ -201,10 +201,11 @@ void intersectionScan() {
   if (rightObject) goRight();
   //face forward
   stage++;
+  if (stage > 5 && pingRemote()) alert();
 }
 
 /*
- * Sweep the front 180 degrees arc with front servo, and scan left and right lanes for remote objects 
+ * Sweep the front 180 degrees arc with front servo, and scan left and right lanes for remote objects
  */
 void sweep() {
   leftObject = false;
@@ -237,7 +238,7 @@ void sweep() {
 }
 
 /*
- * Complete left lane search routine 
+ * Complete left lane search routine
  */
 void goLeft() {
   turnLeft();
@@ -246,7 +247,7 @@ void goLeft() {
 }
 
 /*
- * Complete right lane search routine 
+ * Complete right lane search routine
  */
 void goRight() {
   turnRight();
@@ -255,7 +256,7 @@ void goRight() {
 }
 
 /*
- * Define behaviors while on row lanes searching for close proximity objects 
+ * Define behaviors while on row lanes searching for close proximity objects
  */
 void backtrack() {
   while (ping() >= pingThreshold && !allWhiteSeen()) {
@@ -301,7 +302,7 @@ bool blackLine() {
 }
 
 /*
- * Detect conditions for all sensors reading black 
+ * Detect conditions for all sensors reading black
  */
 bool allBlackSeen() {
   //define boolean flags for state detection
@@ -324,8 +325,8 @@ bool allBlackSeen() {
 }
 
 /*
- * Detect conditions for all sensors reading white 
- * 
+ * Detect conditions for all sensors reading white
+ *
  */
 bool allWhiteSeen() {
   //define boolean flags for state detection
