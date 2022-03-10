@@ -69,7 +69,7 @@ void loop() {
   {
     count++;
     mytime=millis();
-    Serial.print("0000000000000000000000000000000");
+    Serial.print("Y intersection!");
     Serial.print('\t');
  
     servo_forward();
@@ -92,19 +92,19 @@ void loop() {
 
     count++;
     Serial.print(count);
-    Serial.print("Start!");
+    Serial.print("Starting line!");
     Serial.print('\t');
     
     servo_stop();
-    buzzer_n_times(1);
+    buzzer_n_times(1); //beep once for intersection
     delay(1111);
     
-    servo_forward();
+    servo_forward(); //move forward a bit in order to turn
     delay(500);
     return;
   }
   
-  ///////////////// meet intersection 1~3, start detecting object//////////////////
+  ///////////////// meet intersection 1~3, start searching for object in range of 35cm //////////////////
   if(sensorValues[5]>light_threshold && sensorValues[0]>light_threshold && sensorValues[2]>light_threshold && sensorValues[3]>light_threshold && count>1 && count<5)
   {
     count++;
@@ -118,7 +118,7 @@ void loop() {
     servo_forward();
     delay(400);
     
-    servo_left();
+    servo_left(); //turn left first to search for object
     delay(turn_90);
 
     servo_stop();
@@ -139,7 +139,7 @@ void loop() {
     Serial.print("go_left = ");
     Serial.println(go_left);
     
-    servo_right();
+    servo_right(); // then turn right to search for object
     delay(turn_180);
    
     servo_stop();
@@ -156,7 +156,7 @@ void loop() {
       go_right=0;
       }
       
-    servo_left(); 
+    servo_left(); //finally face forward
     delay(turn_90);
 
     return;
@@ -164,7 +164,7 @@ void loop() {
  
   }
 
-///////////////// meet intersection 4, start detecting object//////////////////
+///////////////// meet intersection 4, start searching for object in range of 55cm//////////////////
   if(sensorValues[5]>light_threshold && sensorValues[0]>light_threshold && sensorValues[2]>light_threshold && sensorValues[3]>light_threshold && count==5)
   {
     count++;
@@ -306,12 +306,12 @@ if(sensorValues[5]>light_threshold && sensorValues[0]>light_threshold && sensorV
     servo_left(); // turn left
     delay(turn_90);
 
-    do{ ////////////////////////////////sometimes zero!!!!!!!!!!!!!!!!!!!!!!!!
+    do{ //follow the line until reaching the object, stop at 6cm distance
       dist=sr04.Distance();
 //      Serial.print("dist = ");
 //      Serial.println(dist);
       linefollow();
-    }while(dist>6 || dist==0);
+    }while(dist>6 || dist==0);//sometimes distance appear to be zero!!
     Serial.println("Reach Object BBBBBB");
 
     servo_stop();
