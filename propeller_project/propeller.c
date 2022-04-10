@@ -1,5 +1,5 @@
 /*
-
+for Parallax Ultrasonic sensor, connect a 2K resistor between SIG and pin
 Pin 7 Right Ultrasonic
 Pin 8 trigger pin Front Ultrasonic
 Pin 9 echo pin Front Ultrasonic
