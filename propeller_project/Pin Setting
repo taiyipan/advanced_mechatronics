@@ -1,0 +1,14 @@
+/*
+
+Pin 13 left servo
+Pin 12 right servo
+Pin 10 middle ultrasonic
+Pin 9 right ultrasoinc echo
+Pin 8 right ultrasonic trigger
+Pin 7 left ultrasonic
+Pin 6 LCD 
+Pin 5 Piezo
+Pin 4 LED Green 
+Pin 3 LED Red
+
+*/
