@@ -33,7 +33,7 @@ unsigned int stackMotors[40 + 25];
 unsigned int stackQTR[40 + 25];
 unsigned int stackFrontPing[40 + 25];
 unsigned int stackLeftPing[40 + 25];
-unsigned int stackRightPing[40 + 25];
+// unsigned int stackRightPing[40 + 25];
 unsigned int stackIntersectDetect[40 + 25];
 unsigned int stackTargetDetect[40 + 25];
 
@@ -54,16 +54,16 @@ const int servoStopSpeed = 0;
 const int servoOffSet = -30;
 const int rightServo = 12;
 const int leftServo = 13;
-const int pulseDuration = 50;
+const int pulseDuration = 200;
 const int QTRThreshold = 800;  //above which value is defined as "black"
 const int pingThreshold = 15; //cm
-const int pulseMultiplier = 30;
+const int pulseMultiplier = 6;
 static volatile int leftPingDist = INT_MAX, rightPingDist = INT_MAX, frontPingDist = INT_MAX;
 static volatile int QTRreadings[4];
 static volatile int intersectionCount = 0;
 static volatile int map[] = {0, 1, 2, 0, 0, 2, 0, 2, 0, 0, 2, 0, 2, 0, 0, 0}; //0: forward, 1: turn left, 2: turn right
 static volatile int position = 0;
-static volatile int intersectCogID, targetCogID;
+static volatile int targetCogID;
 
 /*
 Cog 0: main function
@@ -76,15 +76,17 @@ int main()
   cogstart((void*) pingFront, NULL, stackFrontPing, sizeof(stackFrontPing)); //cog 3
   cogstart((void*) pingLeft, NULL, stackLeftPing, sizeof(stackLeftPing)); //cog 4
   // cogstart((void*) pingRight, NULL, stackRightPing, sizeof(stackRightPing)); //cog 5
+  cogstart((void*) intersectionDetected, NULL, stackIntersectDetect, sizeof(stackIntersectDetect)); //cog 6
 
   while(1)
   {
     //obtain PING readings and indicate target detection
     if (leftPingDist < pingThreshold || rightPingDist < pingThreshold || frontPingDist < pingThreshold) {
       //indicate target
-      targetCogID = cogstart((void*) targetDetected, NULL, stackTargetDetect, sizeof(stackTargetDetect));
-      //time buffer
-      pause(2000);
+      targetCogID = cogstart((void*) targetDetected, NULL, stackTargetDetect, sizeof(stackTargetDetect)); //cog 7
+      piezo();
+      //time buffer: prevent repeated alerts of the same target
+      pause(3000);
     }
   }
 }
@@ -102,14 +104,13 @@ void navigate(void *par) {
     if (allWhite()) turnLeft();
     //meet intersection
     else if (allBlack()) {
-      //indicate detection
-      intersectionCount++;
-      intersectCogID = cogstart((void*) intersectionDetected, NULL, stackIntersectDetect, sizeof(stackIntersectDetect));
       //forward pulse multiplier: go through intersection for some distance
       for (int i = 0; i < pulseMultiplier; i++) goForward();
       //differentiate between Y and X intersections
       if (allWhite()) turnLeft(); //Y intersection
       else { //X intersection
+        //indicate detection
+        intersectionCount++;
         //end navigation trigger: last X intersection
         if (position >= (sizeof(map) / sizeof(map[0]))) {
           maneuver(servoStopSpeed, servoStopSpeed, pulseDuration);
@@ -135,7 +136,7 @@ void readLine(void *par) {
   //update sensor readings
   while (1) {
     for (int i = 0; i < (sizeof(QTRreadings) / sizeof(QTRreadings[0])); i++) QTRreadings[i] = adc_in(i);
-    pause(1);
+    pause(100);
   }
 }
 
@@ -164,7 +165,19 @@ Cog 5: right ultrasonic sensor (non-Parallax)
 */
 // void pingRight(void *par) {
 //   while (1) {
-//     rightPingDist = ping_hcsr04(trigPin, echoPin);
+//     // rightPingDist = ping_hcsr04(trigPin, echoPin);
+//     set_directions(trigPin, echoPin, 0b10); //set up pins
+//
+//     low(trigPin);                      //set trig to low before pulse_out
+//     pulse_out(trigPin, 10);             //send 10us pulse
+//
+//     long duration = pulse_in(echoPin, 1);
+//
+//     int hcsr04_cmDist = duration * 0.034 / 2; //calculate distance
+//     //int hcsr04_cmDist = duration/58;
+//     //printf("echo = %d\n",duration);
+//     if(hcsr04_cmDist >= 200) hcsr04_cmDist = 200;
+//     rightPingDist = hcsr04_cmDist;
 //     pause(100);
 //   }
 // }
@@ -173,43 +186,55 @@ Cog 5: right ultrasonic sensor (non-Parallax)
 Cog 6: LCD display (indicate intersection detection)
 */
 void intersectionDetected(void *par) {
-  lcd = serial_open(lcdPin, lcdPin, 0, 9600);
-
-  writeChar(lcd, ON);
-  writeChar(lcd, CLR);
-  pause(5);
-
-  dprint(lcd, "X-Inter: %d\n" , intersectionCount);
-
-  cogstop(intersectCogID);
+  int localCount = 0;
+  while (1) {
+    lcd = serial_open(lcdPin, lcdPin, 0, 9600);
+    writeChar(lcd, ON);
+    writeChar(lcd, CLR);
+    pause(5);
+    dprint(lcd, "%d\n" , intersectionCount);
+    if (localCount != intersectionCount) {
+      localCount = intersectionCount;
+      for (int i = 0; i < 5; i++) {
+        high(26);
+        pause(100);
+        low(26);
+        high(27);
+        pause(100);
+        low(27);
+      }
+    }
+    pause(1000);
+  }
 }
 
 /*
 Cog 7: Piezospeaker and LED (indicate target detection)
 */
 void targetDetected(void *par) {
-  piezo();
   blinkLED();
   cogstop(targetCogID);
 }
 
 /*
-One blink cycle: (200ms total)
+One blink cycle: 2000ms total
 */
 void blinkLED() {
-  high(led1);
-  pause(100);
-  low(led1);
-  high(led2);
-  pause(100);
-  low(led2);
+  for (int i = 0; i < 10; i++) {
+    high(led1);
+    pause(100);
+    low(led1);
+    high(led2);
+    pause(100);
+    low(led2);
+  }
 }
 
 /*
-One Piezospeaker cycle: 1000ms total
+One Piezospeaker cycle: 2000ms total
 */
 void piezo() {
-  freqout(piezoPin, 1000, 3000);
+  freqout(piezoPin, 2000, 3000);
 }
 
 /*
@@ -228,9 +253,9 @@ Read QTRreadings. If robot is off course, compensate so it goes back to its trac
 */
 void compensate() {
   //if right most sensor reads black, turn slightly to the right to compensate
-   if (QTRreadings[0] > QTRThreshold) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration * 3);
+   if (QTRreadings[0] > QTRThreshold) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration);
    //if left most sensor reads black, turn slightly to the left to compensate
-   else if (QTRreadings[(sizeof(QTRreadings) / sizeof(QTRreadings[0])) - 1] > QTRThreshold) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration * 3);
+   else if (QTRreadings[(sizeof(QTRreadings) / sizeof(QTRreadings[0])) - 1] > QTRThreshold) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration);
 }
 
 /*
@@ -244,16 +269,18 @@ void goForward() {
 Rotate in place until black line is lost and then re-acquired: counterclockwise
 */
 void turnLeft() {
-  while (blackLine()) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration * 3);
-  while (!blackLine()) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration * 3);
+  while (blackLine()) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration);
+  while (!blackLine()) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration);
+  maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration);
 }
 
 /*
 Rotate in place until black line is lost and then re-acquired: clockwise
 */
 void turnRight() {
-  while (blackLine()) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration * 3);
-  while (!blackLine()) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration * 3);
+  while (blackLine()) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration);
+  while (!blackLine()) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration);
+  maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration);
 }
 
 /*
