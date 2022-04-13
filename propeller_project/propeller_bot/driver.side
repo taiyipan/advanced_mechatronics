@@ -1,4 +1,6 @@
 driver.c
+ping_hcsr04.c
+adcDCpropab.c
 >compiler=C
 >memtype=cmm main ram compact
 >optimize=-Os
