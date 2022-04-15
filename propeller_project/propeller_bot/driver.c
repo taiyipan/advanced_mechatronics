@@ -13,10 +13,9 @@ void navigate(void *par);
 void readLine(void *par);
 void pingFront(void *par);
 void pingLeft(void *par);
-// void pingRight(void *par);
 void intersectionDetected(void *par);
 void targetDetected(void *par);
-void blinkLED();
+void blinkLED(int);
 void piezo();
 void ping_hcsr04(int, int);
 void maneuver(int, int, int);
@@ -33,7 +32,6 @@ unsigned int stackMotors[40 + 25];
 unsigned int stackQTR[40 + 25];
 unsigned int stackFrontPing[40 + 25];
 unsigned int stackLeftPing[40 + 25];
-// unsigned int stackRightPing[40 + 25];
 unsigned int stackIntersectDetect[40 + 25];
 unsigned int stackTargetDetect[40 + 25];
 
@@ -61,9 +59,12 @@ const int pulseMultiplier = 6;
 static volatile int leftPingDist = INT_MAX, rightPingDist = INT_MAX, frontPingDist = INT_MAX;
 static volatile int QTRreadings[4];
 static volatile int intersectionCount = 0;
-static volatile int map[] = {0, 1, 2, 0, 0, 2, 0, 2, 0, 0, 2, 0, 2, 0, 0, 0}; //0: forward, 1: turn left, 2: turn right
+static volatile int map[] = {2, 2, 0, 0, 2, 0, 2, 0, 0, 2, 0, 2, 0, 0, 0}; //0: forward, 1: turn left, 2: turn right
 static volatile int position = 0;
 static volatile int targetCogID;
+static volatile int firstPassCount = 0;
+static volatile bool firstPass = true;
+static volatile bool obstacleSeen = false;
 
 /*
 Cog 0: main function
@@ -75,15 +76,14 @@ int main()
   cogstart((void*) readLine, NULL, stackQTR, sizeof(stackQTR)); //cog 2
   cogstart((void*) pingFront, NULL, stackFrontPing, sizeof(stackFrontPing)); //cog 3
   cogstart((void*) pingLeft, NULL, stackLeftPing, sizeof(stackLeftPing)); //cog 4
-  // cogstart((void*) pingRight, NULL, stackRightPing, sizeof(stackRightPing)); //cog 5
-  cogstart((void*) intersectionDetected, NULL, stackIntersectDetect, sizeof(stackIntersectDetect)); //cog 6
+  cogstart((void*) intersectionDetected, NULL, stackIntersectDetect, sizeof(stackIntersectDetect)); //cog 5
 
   while(1)
   {
     //obtain PING readings and indicate target detection
     if (leftPingDist < pingThreshold || rightPingDist < pingThreshold || frontPingDist < pingThreshold) {
       //indicate target
-      targetCogID = cogstart((void*) targetDetected, NULL, stackTargetDetect, sizeof(stackTargetDetect)); //cog 7
+      targetCogID = cogstart((void*) targetDetected, NULL, stackTargetDetect, sizeof(stackTargetDetect)); //cog 6
       piezo();
       //time buffer: prevent repeated alerts of the same target
       pause(3000);
@@ -98,8 +98,13 @@ void navigate(void *par) {
   while (1) {
     //forward pulse
     goForward();
-    //stay on track
-    compensate();
+    //obstacle detection: front ultrasonic ping
+    if (!obstacleSeen && frontPingDist < 7) {
+      obstacleSeen = true;
+      turnLeft(); //U-turn
+    }
+    //first pass mode toggle
+    if (obstacleSeen && firstPassCount == 2) firstPass = false;
     //meet deadend
     if (allWhite()) turnLeft();
     //meet intersection
@@ -111,19 +116,30 @@ void navigate(void *par) {
       else { //X intersection
         //indicate detection
         intersectionCount++;
-        //end navigation trigger: last X intersection
-        if (position >= (sizeof(map) / sizeof(map[0]))) {
-          maneuver(servoStopSpeed, servoStopSpeed, pulseDuration);
-          break;
+        //if firstPass mode is on, contiune straight on central lane, detect obstacle, then return to original route
+        if (firstPass) {
+          if (!obstacleSeen) {
+            firstPassCount++;
+          } else {
+            firstPassCount--;
+          }
+        } else { //regular navigation mapping routine
+          //end navigation trigger: last X intersection
+          if (position >= (sizeof(map) / sizeof(map[0]))) {
+            maneuver(servoStopSpeed, servoStopSpeed, pulseDuration);
+            break;
+          }
+          //left turn
+          if (map[position] == 1) turnLeft();
+          //right turn
+          else if (map[position] == 2) turnRight();
+          //increment current position
+          position++;
         }
-        //left turn
-        if (map[position] == 1) turnLeft();
-        //right turn
-        else if (map[position] == 2) turnRight();
-        //increment current position
-        position++;
       }
     }
+    //stay on track
+    compensate();
   }
 }
 
@@ -161,29 +177,7 @@ void pingLeft(void *par) {
 }
 
 /*
-Cog 5: right ultrasonic sensor (non-Parallax)
-*/
-// void pingRight(void *par) {
-//   while (1) {
-//     // rightPingDist = ping_hcsr04(trigPin, echoPin);
-//     set_directions(trigPin, echoPin, 0b10); //set up pins
-//
-//     low(trigPin);                      //set trig to low before pulse_out
-//     pulse_out(trigPin, 10);             //send 10us pulse
-//
-//     long duration = pulse_in(echoPin, 1);
-//
-//     int hcsr04_cmDist = duration * 0.034 / 2; //calculate distance
-//     //int hcsr04_cmDist = duration/58;
-//     //printf("echo = %d\n",duration);
-//     if(hcsr04_cmDist >= 200) hcsr04_cmDist = 200;
-//     rightPingDist = hcsr04_cmDist;
-//     pause(100);
-//   }
-// }
-
-/*
-Cog 6: LCD display (indicate intersection detection)
+Cog 5: LCD display (indicate intersection detection)
 */
 void intersectionDetected(void *par) {
   int localCount = 0;
@@ -195,6 +189,7 @@ void intersectionDetected(void *par) {
     dprint(lcd, "%d\n" , intersectionCount);
     if (localCount != intersectionCount) {
       localCount = intersectionCount;
+      blinkLED(1);
       for (int i = 0; i < 5; i++) {
         high(26);
         pause(100);
@@ -209,18 +204,18 @@ void intersectionDetected(void *par) {
 }
 
 /*
-Cog 7: Piezospeaker and LED (indicate target detection)
+Cog 6: Piezospeaker and LED (indicate target detection)
 */
 void targetDetected(void *par) {
-  blinkLED();
+  blinkLED(10);
   cogstop(targetCogID);
 }
 
 /*
-One blink cycle: 2000ms total
+One blink cycle
 */
-void blinkLED() {
-  for (int i = 0; i < 10; i++) {
+void blinkLED(int cycle) {
+  for (int i = 0; i < cycle; i++) {
     high(led1);
     pause(100);
     low(led1);
@@ -253,9 +248,9 @@ Read QTRreadings. If robot is off course, compensate so it goes back to its trac
 */
 void compensate() {
   //if right most sensor reads black, turn slightly to the right to compensate
-   if (QTRreadings[0] > QTRThreshold) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration);
+   if (QTRreadings[0] > QTRThreshold) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration - 50);
    //if left most sensor reads black, turn slightly to the left to compensate
-   else if (QTRreadings[(sizeof(QTRreadings) / sizeof(QTRreadings[0])) - 1] > QTRThreshold) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration);
+   else if (QTRreadings[(sizeof(QTRreadings) / sizeof(QTRreadings[0])) - 1] > QTRThreshold) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration - 50);
 }
 
 /*
