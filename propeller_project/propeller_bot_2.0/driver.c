@@ -44,7 +44,7 @@ const int echoPin = 9;
 const int led1 = 2;
 const int led2 = 3;
 const int piezoPin = 5;
-const bool piezoLoud = false;
+const bool piezoLoud = true;
 const int lcdPin = 6;
 const int servoLinearSpeed = 25;
 const int servoStopSpeed = 0;
@@ -172,7 +172,7 @@ void intersectionDetected(void *par) {
     lcd = serial_open(lcdPin, lcdPin, 0, 9600);
     writeChar(lcd, ON);
     writeChar(lcd, CLR);
-    pause(5);
+    pause(5); //mandatory after CLR
     dprint(lcd, "%d\n" , intersectionCount);
     if (localCount != intersectionCount) {
       localCount = intersectionCount;
@@ -218,7 +218,7 @@ One Piezospeaker cycle: 2000ms total
 void piezo() {
   int duration = 2000; //ms
   int frequency;
-  if (piezoLoud) frequency = 5000;
+  if (piezoLoud) frequency = 3750;
   else frequency = 3000;
   freqout(piezoPin, duration, frequency);
 }
