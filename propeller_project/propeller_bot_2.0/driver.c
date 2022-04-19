@@ -239,9 +239,9 @@ Read QTRreadings. If robot is off course, compensate so it goes back to its trac
 */
 void compensate() {
   //if right most sensor reads black, turn slightly to the right to compensate
-   if (adc_in(0) > QTRThreshold) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration - 50);
+   if (adc_in(0) > QTRThreshold) maneuver(servoLinearSpeed, -servoLinearSpeed, pulseDuration - 75);
    //if left most sensor reads black, turn slightly to the left to compensate
-   else if (adc_in(QTRSensorCount - 1) > QTRThreshold) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration - 50);
+   else if (adc_in(QTRSensorCount - 1) > QTRThreshold) maneuver(-servoLinearSpeed, servoLinearSpeed, pulseDuration - 75);
 }
 
 /*
