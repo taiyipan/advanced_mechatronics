@@ -19,7 +19,7 @@ const int piezoSpeakerPin = 2;
 const int redLedPin = 6;
 const int greenLedPin = 10;
 const int pingPin = 11;
-const int blackThreshold = 600; //define minimum threshold value to qualify as black line (high value means less sensitivity)[min: 0; max: 1000]
+const int blackThreshold = 500; //define minimum threshold value to qualify as black line (high value means less sensitivity)[min: 0; max: 1000]
 const int pingThreshold = 7; //near ping distance to cause alert
 const int baseSpeed = 150; //set base DC motor speed for going forward (impacts total completion runtime)
 const int rotationSpeed = 50; //set DC motor speed when rotating the robot
@@ -129,7 +129,7 @@ void serialProtocol() {
  */
 void pingProtocol() {
   //U-turn if obstacle detected in close proximity in front
-  if (ping() < pingThreshold) {
+  if (pingToggle() && ping() < pingThreshold) {
     //U-turn
     turnLeft();
     //switch routes dynamically
@@ -233,6 +233,16 @@ long ping() {
   pinMode(pingPin, INPUT);
   long distance = microsecondsToCentimeters(pulseIn(pingPin, HIGH));
   return distance;
+}
+
+/*
+ * Validate ping toggle: on or off, with aims to reduce debris in route false positives
+ */
+bool pingToggle() {
+  if (!obstacleSeen) return true;
+  else if (obstacleSeen && scenario == 2 && intersectionCount == 8) return true;
+  else if (obstacleSeen && scenario == 3 && intersectionCount == 9) return true;
+  else return false;
 }
 
 /*
