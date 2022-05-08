@@ -5,7 +5,8 @@
 //instantiate objects
 Servo servoLeft, servoRight;
 SerialTransfer myTransfer;
-String command;
+int command; //default: -1, cam0_friend_detected: 0, cam0_enemy_detected: 1, cam1_friend_detected: 2, cam1_enemy_detected: 3
+// int cam0State, cam1State; //default: -1, friend_detected: 0, enemy_detected: 1
 QTRSensors qtr;
 const uint8_t SensorCount = 6;
 uint16_t sensorValues[SensorCount];
@@ -79,7 +80,9 @@ void setup() {
   servoRight.writeMicroseconds(RIGHT_SERVO_BASE_VALUE);
 
   //initialize variables
-  command = "start";
+  command = -1;
+  // cam0State = -1;
+  // cam1State = -1;
   obstacleSeen = false;
   intersectionCount = -1;
 
@@ -105,23 +108,21 @@ void loop() {
 
 // Protocol functions -------------------------------------------------------------------
 /*
- *
+ *  Listen for integer commands over serial communication
  */
 void serialProtocol() {
   if (myTransfer.available()) {
     myTransfer.rxObj(command);
   }
-  //pause robot if command is "stop"
-  if (command.equals("stop")) {
+  //pause robot if command is not default value
+  if (command != -1) {
     maneuver(0, 0, 50);
     alert();
   }
-  //resume robot if command is "start"
-  while (!command.equals("start")) {
-    if (myTransfer.available()) {
-      myTransfer.rxObj(command);
-    }
-  }
+  //execute command
+  execute(command);
+  //resume robot and reset state values
+  command = -1;
 }
 
 /*
@@ -401,5 +402,19 @@ void turn(int direction) {
       break;
     default:
       return;
+  }
+}
+
+void execute(int command) {
+  switch(command) {
+    case 0:
+      break;
+    case 1:
+      left_arc();
+      break;
+    case 2:
+      break;
+    case 3:
+      right_arc();
   }
 }
