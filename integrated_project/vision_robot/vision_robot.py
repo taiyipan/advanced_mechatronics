@@ -6,10 +6,9 @@ import cv2.aruco as aruco
 import math
 from time import sleep
 from pySerialTransfer import pySerialTransfer as txfer
-from threading import Thread
 
-# define scan aruco function: this is a threading function
-def scan_aruco(camera_port: int, diagonal_length_threshold: float):
+# define scan aruco function
+def scan_aruco(camera_port = 0, diagonal_length_threshold = 200):
     # open camera handle (port, cam driver api)
     cam = cv2.VideoCapture(camera_port, cv2.CAP_ANY)
     # main loop
@@ -26,12 +25,8 @@ def scan_aruco(camera_port: int, diagonal_length_threshold: float):
                 if not memory.get(id) and diagonal_length(bbox) > diagonal_length_threshold:
                     if id >= 0 and id <= 9 and camera_port == 0:
                         serial_command(commands.get('cam0_friend_detected'))
-                    elif id >= 0 and id <= 9 and camera_port == 1:
-                        serial_command(commands.get('cam1_friend_detected'))
                     elif id >= 10 and id <= 19 and camera_port == 0:
                         serial_command(commands.get('cam0_enemy_detected'))
-                    elif id >= 10 and id <= 19 and camera_port == 1:
-                        serial_command(commands.get('cam1_enemy_detected'))
                     # update memory
                     memory[id] = True
                     break # save time
@@ -72,9 +67,7 @@ for i in range(20):
 # define serial commands
 commands = {
     "cam0_friend_detected": 0,
-    "cam0_enemy_detected": 1,
-    "cam1_friend_detected": 2,
-    "cam1_enemy_detected": 3,
+    "cam0_enemy_detected": 1
 }
 
 # define serial USB port
@@ -85,10 +78,5 @@ link = txfer.SerialTransfer(usb_port)
 link.open()
 sleep(5)
 
-# define threads for 2 cameras (Python concurrency, I/O bound task, threading)
-cam0_thread = Thread(target = scan_aruco, arags = (0,))
-cam1_thread = Thread(target = scan_aruco, arags = (1, 200,))
-
-# start threads for 2 cameras
-cam0_thread.start()
-cam1_thread.start()
+# initiate aruco scan
+scan_aruco()

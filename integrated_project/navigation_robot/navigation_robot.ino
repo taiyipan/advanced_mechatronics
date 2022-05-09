@@ -5,8 +5,7 @@
 //instantiate objects
 Servo servoLeft, servoRight;
 SerialTransfer myTransfer;
-int command; //default: -1, cam0_friend_detected: 0, cam0_enemy_detected: 1, cam1_friend_detected: 2, cam1_enemy_detected: 3
-// int cam0State, cam1State; //default: -1, friend_detected: 0, enemy_detected: 1
+int command; //default: -1, cam0_friend_detected: 0, cam0_enemy_detected: 1
 QTRSensors qtr;
 const uint8_t SensorCount = 6;
 uint16_t sensorValues[SensorCount];
@@ -20,15 +19,15 @@ const int piezoSpeakerPin = 2;
 const int redLedPin = 6;
 const int greenLedPin = 10;
 const int pingPin = 11;
-const int blackThreshold = 500; //define minimum threshold value to qualify as black line (high value means less sensitivity)[min: 0; max: 1000]
+const int blackThreshold = 600; //define minimum threshold value to qualify as black line (high value means less sensitivity)[min: 0; max: 1000]
 const int pingThreshold = 7; //near ping distance to cause alert
-const int baseSpeed = 150; //set base DC motor speed for going forward (impacts total completion runtime)
+const int baseSpeed = 200; //set base DC motor speed for going forward (impacts total completion runtime)
 const int rotationSpeed = 50; //set DC motor speed when rotating the robot
 
 //3 scenarios for navigation routes
 int obstacleI2[] = {0, 2, 2, 0, 0, 2, 2, 0, 0, 0, 3, 1, 2, 0, 0, 2, 0, 2, 0, 0, 0};
 int obstacleI3[] = {0, 0, 0, 2, 2, 0, 0, 2, 2, 0, 3, 1, 2, 0, 0, 2, 0, 2, 0, 0, 0};
-int obstacleI5[] = {0, 0, 0, 0, 1, 2, 0, 0, 2, 0, 2, 0, 0, 0};
+int obstacleI5[] = {0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 2, 2, 0, 0, 2, 0, 2, 0, 0, 0};
 
 //global variables for control algorithm
 int *route;
@@ -81,8 +80,6 @@ void setup() {
 
   //initialize variables
   command = -1;
-  // cam0State = -1;
-  // cam1State = -1;
   obstacleSeen = false;
   intersectionCount = -1;
 
@@ -115,12 +112,12 @@ void serialProtocol() {
     myTransfer.rxObj(command);
   }
   //pause robot if command is not default value
-  if (command != -1) {
+  if (command == 0 || command == 1) {
     maneuver(0, 0, 50);
     alert();
+    //if enemy detection command is received, execute manipulator arm routine
+    if (command == 1) manipulator();
   }
-  //execute command
-  execute(command);
   //resume robot and reset state values
   command = -1;
 }
@@ -158,7 +155,7 @@ void navigationProtocol() {
   //meet intersection
   else if (allBlackSeen()) {
     //go through intersection for some distance
-    maneuver(baseSpeed / 2, baseSpeed / 2, 700 - baseSpeed);
+    maneuver(baseSpeed / 2, baseSpeed / 2, 600 - baseSpeed);
     //differentiate between Y and X intersections
     if (allWhiteSeen()) turnLeft(); //Y intersection
     else { //X intersection
@@ -276,7 +273,10 @@ void maneuver(int speedLeft, int speedRight, int msTime) {
  */
 void killServo() {
   //end navigation trigger: last X intersection; send servo kill signal
-  if ((scenario == 2 && intersectionCount >= 21) || (scenario == 3 && intersectionCount >= 21) || (scenario == 5 && intersectionCount >= 14)) maneuver(0, 0, -1);
+  int scenario2Length = sizeof(obstacleI2) / sizeof(obstacleI2[0]);
+  int scenario3Length = sizeof(obstacleI3) / sizeof(obstacleI3[0]);
+  int scenario5Length = sizeof(obstacleI5) / sizeof(obstacleI5[0]);
+  if ((scenario == 2 && intersectionCount >= scenario2Length) || (scenario == 3 && intersectionCount >= scenario3Length) || (scenario == 5 && intersectionCount >= scenario5Length)) maneuver(0, 0, -1);
 }
 
 /*
@@ -405,16 +405,9 @@ void turn(int direction) {
   }
 }
 
-void execute(int command) {
-  switch(command) {
-    case 0:
-      break;
-    case 1:
-      left_arc();
-      break;
-    case 2:
-      break;
-    case 3:
-      right_arc();
-  }
-}
+/*
+ * Execute manipulator arm routine, sweep 180 degrees on left side of robot
+ */
+ void manipulator() {
+   return;
+ }
