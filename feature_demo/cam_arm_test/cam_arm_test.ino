@@ -50,34 +50,6 @@ void setup() {
   //begin calibration
   alert();
 
-  //send arduino reset signal
-  // delay(500);
-  // myTransfer.sendDatum(arduinoResetSignal);
-  // delay(500);
-
-  // configure the sensors
-  qtr.setTypeAnalog();
-  qtr.setSensorPins((const uint8_t[]){A0, A1, A2, A3, A4, A5}, SensorCount);
-
-  delay(500);
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH); // turn on Arduino's LED to indicate we are in calibration mode
-
-  // analogRead() takes about 0.1 ms on an AVR.
-  // 0.1 ms per sensor * 4 samples per sensor read (default) * 6 sensors
-  // * 10 reads per calibrate() call = ~24 ms per calibrate() call.
-  // Call calibrate() 400 times to make calibration take about 10 seconds.
-  for (uint16_t i = 0; i < 400; i++)
-  {
-    qtr.calibrate();
-  }
-  digitalWrite(LED_BUILTIN, LOW); // turn off Arduino's LED to indicate we are through with calibration
-
-  delay(1000);
-
-  //end calibration
-  alert();
-
   //configure servos
   servoLeft.attach(leftServoPin);
   servoRight.attach(rightServoPin);
@@ -101,15 +73,7 @@ void loop() {
   // put your main code here, to run repeatedly:
   //receive serial command, respond accordingly
   serialProtocol();
-
-  //front ping: if obstacle detected, U-turn the robot
-  pingProtocol();
-
-  //navigation control
-  navigationProtocol();
-
-  //line follow protocol: forward pulse, variable speeds, center on the line
-  lineFollowProtocol();
+  maneuver(100, 100, 50);
 }
 
 // Protocol functions -------------------------------------------------------------------
@@ -122,20 +86,12 @@ void serialProtocol() {
   }
   //pause robot if command is not default value
   if (command == 0 || command == 1) {
-    maneuver(0, 0, 500);
-    delay(200);
-    //if friend detection command is received, green alert
-    if (command == 0) greenAlert();
-    //if enemy detection command is received, red alert, execute manipulator arm routine
-    else if (command == 1) {
-      redAlert();
-      manipulator();
-    }
+    alert();
+    //if enemy detection command is received, execute manipulator arm routine
+    if (command == 1) manipulator();
   }
   //resume robot and reset state values
   command = -1;
-  // servoLeft.attach(leftServoPin);
-  // servoRight.attach(rightServoPin);
 }
 
 /*
@@ -296,7 +252,7 @@ void killServo() {
 }
 
 /*
- * Red-green alternate blinking: startup sequence
+ * Output target detection
  */
 void alert() {
   tone(piezoSpeakerPin, 3500, 1000);
@@ -311,38 +267,6 @@ void alert() {
     delay(100);
   }
   digitalWrite(redLedPin, LOW);
-  digitalWrite(greenLedPin, LOW);
-}
-
-/*
- * Red blinking: enemies
- */
-void redAlert() {
-  tone(piezoSpeakerPin, 3500, 1000);
-  for (int i = 0; i < 10; i++) {
-    if (i % 2 == 0) {
-      digitalWrite(redLedPin, HIGH);
-    } else {
-      digitalWrite(redLedPin, LOW);
-    }
-    delay(100);
-  }
-  digitalWrite(redLedPin, LOW);
-}
-
- /*
-  * Green blinking: friends
-  */
-void greenAlert() {
-  tone(piezoSpeakerPin, 3500, 1000);
-  for (int i = 0; i < 10; i++) {
-    if (i % 2 == 0) {
-      digitalWrite(greenLedPin, HIGH);
-    } else {
-      digitalWrite(greenLedPin, LOW);
-    }
-    delay(100);
-  }
   digitalWrite(greenLedPin, LOW);
 }
 
@@ -457,7 +381,7 @@ void turn(int direction) {
  * Execute manipulator arm routine, sweep 180 degrees on left side of robot
  */
  void manipulator() {
-   servoTop.write(180);
+   servoTop.write(90);
    delay(1500);
    servoTop.write(0);
    delay(1500);

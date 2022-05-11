@@ -24,6 +24,7 @@ def scan_aruco(camera_port = 0, diagonal_length_threshold = 150):
         if len(aruco_found[0]):
             for bbox, id in zip(aruco_found[0], aruco_found[1]):
                 id = int(id[0])
+                print(diagonal_length(bbox))
                 # target detected, send correct serial command to navigation robot
                 if not memory.get(id) and diagonal_length(bbox) > diagonal_length_threshold:
                     if id >= 0 and id <= 9 and camera_port == 0:
