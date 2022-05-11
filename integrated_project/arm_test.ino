@@ -19,7 +19,7 @@ void setup(){
   
   Serial.begin(9600);  
   Serial.println("--- Start controlling the arm ---");
-  Serial.println(" Type in Box above to control the arm(1 for left, 2 for right,3 for both side )");
+  Serial.println(" Type in Box above to control the arm(1 for 90 degree, 2 for 180 degree )");
   Serial.println();
 } 
 void loop(){
@@ -28,25 +28,25 @@ if (Serial.available()) { // Check if at least one character available
   char ch = Serial.read();
   switch(ch) {
     case '1':
-      Serial.println("You entered 1,  arm turn left"); 
-      arm_left();
+      Serial.println("You entered 1,  arm turn 90"); 
+      arm_90();
       break;
     case '2':
-      Serial.println("You entered 2,  arm turn right "); 
-      arm_right();
+      Serial.println("You entered 2,  arm turn 180 "); 
+      arm_180();
       break;
-    case '3':
-      Serial.println("You entered 3, arm turn both side"); 
-      arm_left();
-//      arm_middle();
-      arm_right();
-      break;
+//    case '3':
+//      Serial.println("You entered 3, arm turn both side"); 
+//      arm_left();
+////      arm_middle();
+//      arm_right();
+//      break;
     default :
       Serial.print(ch);
       Serial.println(" was received but not expected");
       break;
     }
-    arm_middle();
+    arm_0();
    }
   
 //  myservo.write(0);// move servos to center position -> 0° //angle: the value to write to the servo, from 0 to 180
@@ -60,18 +60,18 @@ if (Serial.available()) { // Check if at least one character available
 
 }
 
-void arm_right()
+void arm_0()
 {
   myservo.write(0);// move servos to center position -> 0°
   delay(1000);
 }  
-void arm_left()
+void arm_180()
 {
   myservo.write(180);// move servos to center position -> 180°
   delay(1000);
 }  
 
-void arm_middle()
+void arm_90()
 {
   myservo.write(90);// move servos to center position -> 90°
   delay(1000);
