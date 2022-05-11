@@ -3,7 +3,7 @@
 #include "SerialTransfer.h"
 
 //instantiate objects
-Servo servoLeft, servoRight;
+Servo servoLeft, servoRight, servoTop;
 SerialTransfer myTransfer;
 int command; //default: -1, cam0_friend_detected: 0, cam0_enemy_detected: 1
 QTRSensors qtr;
@@ -13,8 +13,9 @@ uint16_t sensorValues[SensorCount];
 //global constants
 const int LEFT_SERVO_BASE_VALUE = 1500; //stop motion value
 const int RIGHT_SERVO_BASE_VALUE = 1500; //stop motion value
-const int leftServoPing = 12;
-const int rightServoPing = 13;
+const int leftServoPin = 12;
+const int rightServoPin = 13;
+const int topServoPin = 9;
 const int piezoSpeakerPin = 2;
 const int redLedPin = 6;
 const int greenLedPin = 10;
@@ -23,6 +24,7 @@ const int blackThreshold = 600; //define minimum threshold value to qualify as b
 const int pingThreshold = 7; //near ping distance to cause alert
 const int baseSpeed = 200; //set base DC motor speed for going forward (impacts total completion runtime)
 const int rotationSpeed = 50; //set DC motor speed when rotating the robot
+const int arduinoResetSignal = -1;
 
 //3 scenarios for navigation routes
 int obstacleI2[] = {0, 2, 2, 0, 0, 2, 2, 0, 0, 0, 3, 1, 2, 0, 0, 2, 0, 2, 0, 0, 0};
@@ -48,6 +50,11 @@ void setup() {
   //begin calibration
   alert();
 
+  //send arduino reset signal
+  // delay(500);
+  // myTransfer.sendDatum(arduinoResetSignal);
+  // delay(500);
+
   // configure the sensors
   qtr.setTypeAnalog();
   qtr.setSensorPins((const uint8_t[]){A0, A1, A2, A3, A4, A5}, SensorCount);
@@ -72,11 +79,13 @@ void setup() {
   alert();
 
   //configure servos
-  servoLeft.attach(leftServoPing);
-  servoRight.attach(rightServoPing);
+  servoLeft.attach(leftServoPin);
+  servoRight.attach(rightServoPin);
+  servoTop.attach(topServoPin);
 
   servoLeft.writeMicroseconds(LEFT_SERVO_BASE_VALUE);
   servoRight.writeMicroseconds(RIGHT_SERVO_BASE_VALUE);
+  servoTop.write(0);
 
   //initialize variables
   command = -1;
@@ -113,13 +122,15 @@ void serialProtocol() {
   }
   //pause robot if command is not default value
   if (command == 0 || command == 1) {
-    maneuver(0, 0, 50);
+    maneuver(0, 0, -1);
     alert();
     //if enemy detection command is received, execute manipulator arm routine
     if (command == 1) manipulator();
   }
   //resume robot and reset state values
   command = -1;
+  servoLeft.attach(leftServoPin);
+  servoRight.attach(rightServoPin);
 }
 
 /*
@@ -129,7 +140,7 @@ void pingProtocol() {
   //U-turn if obstacle detected in close proximity in front
   if (pingToggle() && ping() < pingThreshold) {
     //U-turn
-    turnLeft();
+    turnRight();
     //switch routes dynamically
     if (!obstacleSeen) {
       if (intersectionCount < 2) {
@@ -379,8 +390,8 @@ void turnRight() {
  * At X intersection, turnLeft() twice to make 180 degrees U-turn
  */
 void intersectionUTurn() {
-  turnLeft();
-  turnLeft();
+  turnRight();
+  turnRight();
 }
 
 /*
@@ -409,5 +420,8 @@ void turn(int direction) {
  * Execute manipulator arm routine, sweep 180 degrees on left side of robot
  */
  void manipulator() {
-   return;
+   servoTop.write(180);
+   delay(1500);
+   servoTop.write(0);
+   delay(1500);
  }
