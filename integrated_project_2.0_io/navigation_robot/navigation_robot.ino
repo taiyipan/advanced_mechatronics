@@ -19,8 +19,8 @@ const int greenLedPin = 10;
 const int pingPin = 11;
 const int blackThreshold = 600; //define minimum threshold value to qualify as black line (high value means less sensitivity)[min: 0; max: 1000]
 const int pingThreshold = 7; //near ping distance to cause alert
-const int baseSpeed = 100; //set base DC motor speed for going forward (impacts total completion runtime)
-const int rotationSpeed = 50; //set DC motor speed when rotating the robot
+const int baseSpeed = 75; //set base DC motor speed for going forward (impacts total completion runtime)
+const int rotationSpeed = 35; //set DC motor speed when rotating the robot
 const int arduinoResetSignal = -1;
 const int friendStatePin = 5;
 const int enemyStatePin = 7;
@@ -117,11 +117,9 @@ void loop() {
  */
 void ioProtocol() {
   if (digitalRead(friendStatePin) == HIGH) {
-    maneuver(baseSpeed, baseSpeed, 700);
     maneuver(0, 0, 500);
     greenAlert();
   } else if (digitalRead(enemyStatePin) == HIGH) {
-    maneuver(baseSpeed, baseSpeed, 700);
     maneuver(0, 0, 500);
     redAlert();
     manipulator();
@@ -161,12 +159,14 @@ void navigationProtocol() {
   //meet intersection
   else if (allBlackSeen()) {
     //go through intersection for some distance
-    maneuver(baseSpeed / 2, baseSpeed / 2, 600 - baseSpeed);
+    maneuver(baseSpeed / 2, baseSpeed / 2, 800 - baseSpeed);
     //differentiate between Y and X intersections
     if (allWhiteSeen()) turnLeft(); //Y intersection
     else { //X intersection
       //end navigation trigger: last X intersection
       killServo();
+      //call ioProtocol
+      ioProtocol();
       //choose a direction
       turn(*(route + intersectionCount));
       //increment
@@ -383,11 +383,13 @@ bool allWhiteSeen() {
 void turnLeft() {
   //turn left in place to escape current black line
   while (blackLine()) {
+    ioProtocol();
     maneuver(-rotationSpeed, rotationSpeed, 50);
     delay(100);
   }
   //turn left in place to re-acquire black line
   while (!blackLine()) {
+    ioProtocol();
     maneuver(-rotationSpeed, rotationSpeed, 50);
     delay(100);
   }
@@ -401,11 +403,13 @@ void turnLeft() {
 void turnRight() {
   //turn right in place to escape current black line
   while (blackLine()) {
+    ioProtocol();
     maneuver(rotationSpeed, -rotationSpeed, 50);
     delay(100);
   }
   //turn right in place to re-acquire black line
   while (!blackLine()) {
+    ioProtocol();
     maneuver(rotationSpeed, -rotationSpeed, 50);
     delay(100);
   }
@@ -447,7 +451,7 @@ void turn(int direction) {
  * Execute manipulator arm routine, sweep 180 degrees on left side of robot
  */
  void manipulator() {
-   servoTop.write(180);
+   servoTop.write(120);
    delay(1500);
    servoTop.write(0);
    delay(1500);

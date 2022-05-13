@@ -12,7 +12,7 @@ FRIEND_STATE_PIN = 36
 ENEMY_STATE_PIN = 38
 
 # define scan aruco function
-def scan_aruco(camera_port = 0, diagonal_length_threshold = 150):
+def scan_aruco(camera_port = 0, diagonal_length_threshold = 45):
     # open camera handle (port, cam driver api)
     cam = cv2.VideoCapture(camera_port, cv2.CAP_ANY)
     # main loop
@@ -29,7 +29,7 @@ def scan_aruco(camera_port = 0, diagonal_length_threshold = 150):
                 id = int(id[0])
                 print(diagonal_length(bbox))
                 # target detected, send correct serial command to navigation robot
-                if not memory.get(id) and diagonal_length(bbox) > diagonal_length_threshold:
+                if diagonal_length(bbox) > diagonal_length_threshold and not memory.get(id):
                     if id >= 0 and id <= 9 and camera_port == 0:
                         io_command(commands.get('cam0_friend_detected'))
                     elif id >= 10 and id <= 19 and camera_port == 0:
