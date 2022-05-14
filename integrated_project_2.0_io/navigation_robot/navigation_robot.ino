@@ -18,13 +18,16 @@ const int redLedPin = 6;
 const int greenLedPin = 10;
 const int pingPin = 11;
 const int blackThreshold = 600; //define minimum threshold value to qualify as black line (high value means less sensitivity)[min: 0; max: 1000]
-const int pingThreshold = 7; //near ping distance to cause alert
-const int baseSpeed = 75; //set base DC motor speed for going forward (impacts total completion runtime)
-const int rotationSpeed = 35; //set DC motor speed when rotating the robot
+const int pingThreshold = 5; //near ping distance to cause alert
+const int baseSpeed = 65; //set base DC motor speed for going forward (impacts total completion runtime)
+const int rotationSpeed = 50; //set DC motor speed when rotating the robot
+const int intersectionOvershoot = 725; //tune this param so that wheels stop at intersection
 const int arduinoResetSignal = -1;
 const int friendStatePin = 5;
 const int enemyStatePin = 7;
 const int buttonPin = 4;
+const int piezoSpeakerVolume = 3500; //3500 for makerspace volume
+const int manipulatorAngle = 150; //min: 0, max: 180
 
 //3 scenarios for navigation routes
 int obstacleI2[] = {0, 2, 2, 0, 0, 2, 2, 0, 0, 0, 3, 1, 2, 0, 0, 2, 0, 2, 0, 0, 0};
@@ -49,7 +52,7 @@ void setup() {
 
   //wait for button press to proceed to calibration
   while (digitalRead(buttonPin) == LOW) {
-    delay(500);
+    delay(100);
   }
 
   //begin calibration
@@ -116,6 +119,7 @@ void loop() {
  *  Listen for io commands
  */
 void ioProtocol() {
+  delay(50);
   if (digitalRead(friendStatePin) == HIGH) {
     maneuver(0, 0, 500);
     greenAlert();
@@ -124,6 +128,7 @@ void ioProtocol() {
     redAlert();
     manipulator();
   }
+  delay(50);
 }
 
 /*
@@ -132,8 +137,8 @@ void ioProtocol() {
 void pingProtocol() {
   //U-turn if obstacle detected in close proximity in front
   if (pingToggle() && ping() < pingThreshold) {
-    //U-turn
-    turnRight();
+    //U-turn by turnRight()
+    turn(2);
     //switch routes dynamically
     if (!obstacleSeen) {
       if (intersectionCount < 2) {
@@ -159,14 +164,12 @@ void navigationProtocol() {
   //meet intersection
   else if (allBlackSeen()) {
     //go through intersection for some distance
-    maneuver(baseSpeed / 2, baseSpeed / 2, 800 - baseSpeed);
+    maneuver(baseSpeed / 2, baseSpeed / 2, intersectionOvershoot);
     //differentiate between Y and X intersections
-    if (allWhiteSeen()) turnLeft(); //Y intersection
+    if (allWhiteSeen()) turn(1); //Y intersection
     else { //X intersection
       //end navigation trigger: last X intersection
       killServo();
-      //call ioProtocol
-      ioProtocol();
       //choose a direction
       turn(*(route + intersectionCount));
       //increment
@@ -289,7 +292,7 @@ void killServo() {
  * Red-green alternate blinking: startup sequence
  */
 void alert() {
-  tone(piezoSpeakerPin, 3500, 1000);
+  piezo();
   for (int i = 0; i < 10; i++) {
     if (i % 2 == 0) {
       digitalWrite(redLedPin, HIGH);
@@ -308,7 +311,7 @@ void alert() {
  * Red blinking: enemies
  */
 void redAlert() {
-  tone(piezoSpeakerPin, 3500, 1000);
+  piezo();
   for (int i = 0; i < 10; i++) {
     if (i % 2 == 0) {
       digitalWrite(redLedPin, HIGH);
@@ -324,7 +327,7 @@ void redAlert() {
   * Green blinking: friends
   */
 void greenAlert() {
-  tone(piezoSpeakerPin, 3500, 1000);
+  piezo();
   for (int i = 0; i < 10; i++) {
     if (i % 2 == 0) {
       digitalWrite(greenLedPin, HIGH);
@@ -334,6 +337,13 @@ void greenAlert() {
     delay(100);
   }
   digitalWrite(greenLedPin, LOW);
+}
+
+/*
+ * Beep piezospeaker for 1 second
+ */
+void piezo() {
+   tone(piezoSpeakerPin, piezoSpeakerVolume, 1000);
 }
 
 /*
@@ -383,13 +393,11 @@ bool allWhiteSeen() {
 void turnLeft() {
   //turn left in place to escape current black line
   while (blackLine()) {
-    ioProtocol();
     maneuver(-rotationSpeed, rotationSpeed, 50);
     delay(100);
   }
   //turn left in place to re-acquire black line
   while (!blackLine()) {
-    ioProtocol();
     maneuver(-rotationSpeed, rotationSpeed, 50);
     delay(100);
   }
@@ -403,13 +411,11 @@ void turnLeft() {
 void turnRight() {
   //turn right in place to escape current black line
   while (blackLine()) {
-    ioProtocol();
     maneuver(rotationSpeed, -rotationSpeed, 50);
     delay(100);
   }
   //turn right in place to re-acquire black line
   while (!blackLine()) {
-    ioProtocol();
     maneuver(rotationSpeed, -rotationSpeed, 50);
     delay(100);
   }
@@ -430,6 +436,8 @@ void intersectionUTurn() {
  * 0: forward, 1: turn left, 2: turn right, 3: intersection U-turn
  */
 void turn(int direction) {
+  //call ioProtocol
+  ioProtocol();
   switch(direction) {
     case 0:
       break;
@@ -445,13 +453,15 @@ void turn(int direction) {
     default:
       return;
   }
+  //call ioProtocol again
+  ioProtocol();
 }
 
 /*
  * Execute manipulator arm routine, sweep 180 degrees on left side of robot
  */
  void manipulator() {
-   servoTop.write(120);
+   servoTop.write(manipulatorAngle);
    delay(1500);
    servoTop.write(0);
    delay(1500);
