@@ -285,7 +285,11 @@ void killServo() {
   int scenario2Length = sizeof(obstacleI2) / sizeof(obstacleI2[0]);
   int scenario3Length = sizeof(obstacleI3) / sizeof(obstacleI3[0]);
   int scenario5Length = sizeof(obstacleI5) / sizeof(obstacleI5[0]);
-  if ((scenario == 2 && intersectionCount >= scenario2Length) || (scenario == 3 && intersectionCount >= scenario3Length) || (scenario == 5 && intersectionCount >= scenario5Length)) maneuver(0, 0, -1);
+  if ((scenario == 2 && intersectionCount >= scenario2Length) || (scenario == 3 && intersectionCount >= scenario3Length) || (scenario == 5 && intersectionCount >= scenario5Length)) {
+    maneuver(baseSpeed / 2, baseSpeed / 2, 500);
+    ioProtocol();
+    maneuver(0, 0, -1);
+  }
 }
 
 /*
